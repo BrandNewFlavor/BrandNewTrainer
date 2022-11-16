@@ -17,18 +17,6 @@ namespace BrandNewTrainer
         private static readonly ObjectPool pool = new ObjectPool();
         private static readonly NativeMenu mainMenu = new NativeMenu(ModSettings.modName);
 
-        private static readonly NativeMenu cheatsSubmenu = new NativeMenu(ModSettings.modName, "Cheats");
-        private static readonly NativeItem cheatsClearWantedItem = new NativeItem("Clear Wanted");
-        private static readonly NativeCheckboxItem cheatsNeverWantedItem = new NativeCheckboxItem("Never Wanted", false);
-        private static readonly NativeCheckboxItem cheatsGodModeItem = new NativeCheckboxItem("God Mode", false);
-
-        private static readonly NativeMenu weatherAndTimeSubmenu = new NativeMenu(ModSettings.modName, "Time & Weather");
-        private static readonly NativeListItem<string> timeListItem = new NativeListItem<string>("Time", "Set the current time", "Morning", "Afternoon", "Evening", "Night");
-        private static readonly NativeListItem<string> weatherListItem = new NativeListItem<string>("Weather", "Set the current weather", "Clear", "Clearing", "Neutral", "Extra Sunny", "Clouds", "Raining", "Foggy", "Smog", "Blizzard", "Thunder Storm", "Snowing", "Snowlight", "Christmas", "Halloween", "Overcast");
-
-        private static readonly NativeMenu debugSubmenu = new NativeMenu(ModSettings.modName, "Debug");
-        private static readonly NativeItem debugGetPosItem = new NativeItem("Get Position", "Get current position of the player");
-
         private bool isVisible = false;
 
         private bool isNeverWanted = false;
@@ -40,7 +28,7 @@ namespace BrandNewTrainer
         {
             pool.Add(mainMenu);
 
-            InitAllSubmenus();
+            HandleAllSubmenus();
 
             Tick += OnTick;
             KeyUp += OnKeyUp;
@@ -69,23 +57,28 @@ namespace BrandNewTrainer
 
         #endregion
 
-        #region Init Submenus
-        private void InitCheatsSubmenu()
+        #region Handle Submenus
+        private void HandleCheatsSubmenu()
         {
-            pool.Add(cheatsSubmenu);
+            NativeMenu subMenu = new NativeMenu(ModSettings.modName, "Cheats");
+            NativeItem clearWantedItem = new NativeItem("Clear Wanted");
+            NativeCheckboxItem neverWantedCheckboxItem = new NativeCheckboxItem("Never Wanted", false);
+            NativeCheckboxItem godModeCheckboxItem = new NativeCheckboxItem("God Mode", false);
 
-            mainMenu.AddSubMenu(cheatsSubmenu);
+            pool.Add(subMenu);
 
-            cheatsSubmenu.Add(cheatsClearWantedItem);
-            cheatsSubmenu.Add(cheatsNeverWantedItem);
-            cheatsSubmenu.Add(cheatsGodModeItem);
+            mainMenu.AddSubMenu(subMenu);
 
-            cheatsClearWantedItem.Activated += OnClearWanted;
-            cheatsNeverWantedItem.Activated += OnNeverWanted;
-            cheatsGodModeItem.Activated += OnGodMode;
+            subMenu.Add(clearWantedItem);
+            subMenu.Add(neverWantedCheckboxItem);
+            subMenu.Add(godModeCheckboxItem);
+
+            clearWantedItem.Activated += (sender, args) => {Game.Player.WantedLevel = 0;};
+            neverWantedCheckboxItem.Activated += (sender, args) => { isNeverWanted = neverWantedCheckboxItem.Checked;};
+            godModeCheckboxItem.Activated += (sender, args) => { Game.Player.Character.IsInvincible = godModeCheckboxItem.Checked; };
         }
 
-        private void InitTeleportSubmenu()
+        private void HandleTeleportSubmenu()
         {
             NativeMenu submenu = new NativeMenu(ModSettings.modName, "Teleportation");
             NativeItem waypointItem = new NativeItem("Waypoint", "Teleport the player to the current waypoint");
@@ -103,7 +96,7 @@ namespace BrandNewTrainer
             submenu.AddSubMenu(exteriorsSubmenu);
             submenu.AddSubMenu(interiorsSubmenu);
 
-            waypointItem.Activated += OnTeleportToWaypoint;
+            waypointItem.Activated += (sender, args) => { TeleportToWaypoint(); };
 
             Dictionary<string, Vector3> exteriorsDict = new Dictionary<string, Vector3>()
             {
@@ -142,57 +135,126 @@ namespace BrandNewTrainer
 
         }
 
-        private void InitWeatherAndTimeSubmenu()
+        private void HandleWeatherAndTimeSubmenu()
         {
-            pool.Add(weatherAndTimeSubmenu);
+            NativeMenu subMenu = new NativeMenu(ModSettings.modName, "Time & Weather");
+            NativeListItem<string> timeListItem = new NativeListItem<string>("Time", "Set the current time", "Morning", "Afternoon", "Evening", "Night");
+            NativeListItem<string> weatherListItem = new NativeListItem<string>("Weather", "Set the current weather", "Clear", "Clearing", "Neutral", "Extra Sunny", "Clouds", "Raining", "Foggy", "Smog", "Blizzard", "Thunder Storm", "Snowing", "Snowlight", "Christmas", "Halloween", "Overcast");
 
-            mainMenu.AddSubMenu(weatherAndTimeSubmenu);
 
-            weatherAndTimeSubmenu.Add(timeListItem);
-            weatherAndTimeSubmenu.Add(weatherListItem);
+            pool.Add(subMenu);
 
-            timeListItem.Activated += OnTime;
-            weatherListItem.Activated += OnWeather;
+            mainMenu.AddSubMenu(subMenu);
+
+            subMenu.Add(timeListItem);
+            subMenu.Add(weatherListItem);
+
+            timeListItem.Activated += (sender, args) =>
+            {
+                switch (timeListItem.SelectedItem)
+                {
+                    case "Morning":
+                        Function.Call(Hash.SET_CLOCK_TIME, 06, 00, 00);
+                        break;
+                    case "Afternoon":
+                        Function.Call(Hash.SET_CLOCK_TIME, 12, 00, 00);
+                        break;
+                    case "Evening":
+                        Function.Call(Hash.SET_CLOCK_TIME, 18, 00, 00);
+                        break;
+                    case "Night":
+                        Function.Call(Hash.SET_CLOCK_TIME, 00, 00, 00);
+                        break;
+                }
+
+                GTA.UI.Notification.Show("Time set to ~b~" + timeListItem.SelectedItem);
+            };
+
+            weatherListItem.Activated += (sender, args) =>
+            {
+                switch (weatherListItem.SelectedItem)
+                {
+                    case "Clear":
+                        World.Weather = Weather.Clear;
+                        break;
+                    case "Clearing":
+                        World.Weather = Weather.Clearing;
+                        break;
+                    case "Neutral":
+                        World.Weather = Weather.Neutral;
+                        break;
+                    case "Extra Sunny":
+                        World.Weather = Weather.ExtraSunny;
+                        break;
+                    case "Clouds":
+                        World.Weather = Weather.Clouds;
+                        break;
+                    case "Raining":
+                        World.Weather = Weather.Raining;
+                        break;
+                    case "Foggy":
+                        World.Weather = Weather.Foggy;
+                        break;
+                    case "Smog":
+                        World.Weather = Weather.Smog;
+                        break;
+                    case "Blizzard":
+                        World.Weather = Weather.Blizzard;
+                        break;
+                    case "Thunder Storm":
+                        World.Weather = Weather.ThunderStorm;
+                        break;
+                    case "Snowing":
+                        World.Weather = Weather.Snowing;
+                        break;
+                    case "Snowlight":
+                        World.Weather = Weather.Snowlight;
+                        break;
+                    case "Christmas":
+                        World.Weather = Weather.Christmas;
+                        break;
+                    case "Halloween":
+                        World.Weather = Weather.Halloween;
+                        break;
+                    case "Overcast":
+                        World.Weather = Weather.Overcast;
+                        break;
+                }
+
+                GTA.UI.Notification.Show("Weather set to ~b~" + weatherListItem.SelectedItem);
+            };
 
         }
 
-        private void InitDebugSubmenu()
+        private void HandleDebugSubmenu()
         {
-            pool.Add(debugSubmenu);
+            NativeMenu subMenu = new NativeMenu(ModSettings.modName, "Debug");
+            NativeItem getPosItem = new NativeItem("Get Position", "Get current position of the player");
 
-            mainMenu.AddSubMenu(debugSubmenu);
-            debugSubmenu.Add(debugGetPosItem);
+            pool.Add(subMenu);
 
-            debugGetPosItem.Activated += OnDebugGetPos;
+            mainMenu.AddSubMenu(subMenu);
+            subMenu.Add(getPosItem);
+
+            getPosItem.Activated += (sender, args) =>
+            {
+                Vector3 pos = Game.Player.Character.Position;
+                GTA.UI.Notification.Show("~q~X: " + pos.X + "\n~p~Y: " + pos.Y + "\n~b~Z: " + pos.Z);
+            };
         }
 
-        private void InitAllSubmenus()
+        private void HandleAllSubmenus()
         {
-            InitCheatsSubmenu();
-            InitTeleportSubmenu();
-            InitWeatherAndTimeSubmenu();
-            InitDebugSubmenu();
+            HandleCheatsSubmenu();
+            HandleTeleportSubmenu();
+            HandleWeatherAndTimeSubmenu();
+            HandleDebugSubmenu();
         }
 
         #endregion
 
         #region Items Methods
-        private void OnClearWanted(object sender, EventArgs e)
-        {
-            Game.Player.WantedLevel = 0;
-        }
-
-        private void OnNeverWanted(object sender, EventArgs e)
-        {
-            isNeverWanted = cheatsNeverWantedItem.Checked;
-        }
-
-        private void OnGodMode(object sender, EventArgs e)
-        {
-            Game.Player.Character.IsInvincible = cheatsGodModeItem.Checked;
-        }
-
-        private void OnTeleportToWaypoint(object sender, EventArgs e)
+        private void TeleportToWaypoint()
         {
             if (Game.IsWaypointActive)
             {
@@ -214,87 +276,6 @@ namespace BrandNewTrainer
             {
                 GTA.UI.Notification.Show("~r~You should add a ~b~waypoint ~r~first!");
             }
-        }
-
-        private void OnTime(object sender, EventArgs e)
-        {
-            switch (timeListItem.SelectedItem)
-            {
-                case "Morning":
-                    Function.Call(Hash.SET_CLOCK_TIME, 06, 00, 00);
-                    break;
-                case "Afternoon":
-                    Function.Call(Hash.SET_CLOCK_TIME, 12, 00, 00);
-                    break;
-                case "Evening":
-                    Function.Call(Hash.SET_CLOCK_TIME, 18, 00, 00);
-                    break;
-                case "Night":
-                    Function.Call(Hash.SET_CLOCK_TIME, 00, 00, 00);
-                    break;
-            }
-
-            GTA.UI.Notification.Show("Time set to ~b~" + timeListItem.SelectedItem);
-        }
-
-        private void OnWeather(object sender, EventArgs e)
-        {
-            switch (weatherListItem.SelectedItem)
-            {
-                case "Clear":
-                    World.Weather = Weather.Clear;
-                    break;
-                case "Clearing":
-                    World.Weather = Weather.Clearing;
-                    break;
-                case "Neutral":
-                    World.Weather = Weather.Neutral;
-                    break;
-                case "Extra Sunny":
-                    World.Weather = Weather.ExtraSunny;
-                    break;
-                case "Clouds":
-                    World.Weather = Weather.Clouds;
-                    break;
-                case "Raining":
-                    World.Weather = Weather.Raining;
-                    break;
-                case "Foggy":
-                    World.Weather = Weather.Foggy;
-                    break;
-                case "Smog":
-                    World.Weather = Weather.Smog;
-                    break;
-                case "Blizzard":
-                    World.Weather = Weather.Blizzard;
-                    break;
-                case "Thunder Storm":
-                    World.Weather = Weather.ThunderStorm;
-                    break;
-                case "Snowing":
-                    World.Weather = Weather.Snowing;
-                    break;
-                case "Snowlight":
-                    World.Weather = Weather.Snowlight;
-                    break;
-                case "Christmas":
-                    World.Weather = Weather.Christmas;
-                    break;
-                case "Halloween":
-                    World.Weather = Weather.Halloween;
-                    break;
-                case "Overcast":
-                    World.Weather = Weather.Overcast;
-                    break;
-            }
-
-            GTA.UI.Notification.Show("Weather set to ~b~" + weatherListItem.SelectedItem);
-        }
-
-        private void OnDebugGetPos(object sender, EventArgs e)
-        {
-            Vector3 pos = Game.Player.Character.Position;
-            GTA.UI.Notification.Show("~q~X: " + pos.X + "\n~p~Y: " + pos.Y + "\n~b~Z: " + pos.Z);
         }
 
         #endregion
