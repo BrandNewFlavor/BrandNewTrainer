@@ -3,7 +3,7 @@
 
 ## About
 
-A C# GTA V Mod using [ScriptHookVDotNet](https://github.com/crosire/scripthookvdotnet) and [LemonUI](https://github.com/LemonUIbyLemon/LemonUI)
+A C# GTA V Trainer Mod ( or Mod Menu ) using [ScriptHookVDotNet](https://github.com/crosire/scripthookvdotnet) and [LemonUI](https://github.com/LemonUIbyLemon/LemonUI)
 
 Made for testing my other mods, so it's more for modders than gamers.
 
