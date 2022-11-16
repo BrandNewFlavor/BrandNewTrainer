@@ -1,5 +1,5 @@
 # BrandNewTrainer
-An another Trainer Mod for GTA V
+*:warning: Still in progress*
 
 ## About
 
@@ -13,4 +13,3 @@ Made for testing my other mods, so it's more for modders than gamers.
 - Weather and Time controls
 - Debug Options ( Show FPS, Get the position of the player... )
 
-<sub>*:warning: Still in progress*</sub>
